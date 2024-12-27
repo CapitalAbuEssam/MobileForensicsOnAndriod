@@ -46,8 +46,19 @@ The application includes the following functionalities:
     ```bash
     adb version
     ```
+4. ADB (Android Debug Bridge) Tools
+The script uses ADB commands to interact with Android devices. Make sure ADB is installed and accessible from your terminal.
 
-4. Connect your Android device via USB and enable **USB Debugging** from Developer Options.
+You can install ADB if it's not installed:
+
+```bash
+Copy code
+sudo apt-get install adb  # On Linux (Ubuntu/Debian-based)
+brew install android-platform-tools # On macOS with Homebrew
+sudo pacman -S android-tools # On Arch Linux
+```
+
+5. Connect your Android device via USB and enable **USB Debugging** from Developer Options.
 
 ---
 
