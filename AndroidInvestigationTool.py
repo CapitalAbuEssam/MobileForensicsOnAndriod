@@ -94,32 +94,32 @@ class ForensicTool:
     def extract_device_info(self, fs):
         self.result_text.insert(tk.END, "Device Information:\n")
         try:
-            info_path = "/data/system/device_info.txt"
+            info_path = "/data/system/.layout_version"
             file_obj = fs.open(info_path)
             data = file_obj.read_random(0, file_obj.info.meta.size).decode("utf-8")
             self.result_text.insert(tk.END, f"{data}\n")
         except Exception as e:
-            self.result_text.insert(tk.END, f"Error: {e}\n")
+            self.result_text.insert(tk.END, f"Error: Could not retrieve device info: {e}\n")
 
     def extract_system_logs(self, fs):
         self.result_text.insert(tk.END, "System Logs:\n")
         try:
-            log_path = "/data/system/logs/system_log.txt"
+            log_path = "/data/anr/anr_2019-02-14-19-02-38-416"
             file_obj = fs.open(log_path)
             data = file_obj.read_random(0, file_obj.info.meta.size).decode("utf-8")
             self.result_text.insert(tk.END, f"{data}\n")
         except Exception as e:
-            self.result_text.insert(tk.END, f"Error: {e}\n")
+            self.result_text.insert(tk.END, f"Error: Could not retrieve system logs: {e}\n")
 
     def extract_root_status(self, fs):
         self.result_text.insert(tk.END, "Root Status and Modifications:\n")
         try:
-            root_path = "/data/system/root_status.txt"
+            root_path = "/data/adb/magisk.db"
             file_obj = fs.open(root_path)
             data = file_obj.read_random(0, file_obj.info.meta.size).decode("utf-8")
             self.result_text.insert(tk.END, f"{data}\n")
         except Exception as e:
-            self.result_text.insert(tk.END, f"Error: {e}\n")
+            self.result_text.insert(tk.END, f"Error: Could not retrieve root status: {e}\n")
 
     def extract_call_logs(self, fs):
         self.result_text.insert(tk.END, "Call Logs:\n")
@@ -137,7 +137,7 @@ class ForensicTool:
                 self.result_text.insert(tk.END, f"{row[0]}\t{row[1]}\t{row[2]}\t{row[3]}\n")
             conn.close()
         except Exception as e:
-            self.result_text.insert(tk.END, f"Error: {e}\n")
+            self.result_text.insert(tk.END, f"Error: Could not retrieve call logs: {e}\n")
 
     def extract_contacts(self, fs):
         self.result_text.insert(tk.END, "Contacts:\n")
@@ -155,7 +155,7 @@ class ForensicTool:
                 self.result_text.insert(tk.END, f"{row[0]}\t{row[1]}\n")
             conn.close()
         except Exception as e:
-            self.result_text.insert(tk.END, f"Error: {e}\n")
+            self.result_text.insert(tk.END, f"Error: Could not retrieve contacts: {e}\n")
 
     def extract_messages(self, fs):
         self.result_text.insert(tk.END, "Messages:\n")
@@ -173,7 +173,7 @@ class ForensicTool:
                 self.result_text.insert(tk.END, f"{row[0]}\t{row[1]}\t{row[2]}\n")
             conn.close()
         except Exception as e:
-            self.result_text.insert(tk.END, f"Error: {e}\n")
+            self.result_text.insert(tk.END, f"Error: Could not retrieve messages: {e}\n")
 
     def extract_photos(self, fs):
         self.result_text.insert(tk.END, "Photos and Videos:\n")
@@ -183,7 +183,7 @@ class ForensicTool:
             for entry in directory:
                 self.result_text.insert(tk.END, f"{entry.info.name.name.decode('utf-8')}\n")
         except Exception as e:
-            self.result_text.insert(tk.END, f"Error: {e}\n")
+            self.result_text.insert(tk.END, f"Error: Could not retrieve media files: {e}\n")
 
     def extract_audio_files(self, fs):
         self.result_text.insert(tk.END, "Audio Files:\n")
@@ -193,12 +193,12 @@ class ForensicTool:
             for entry in directory:
                 self.result_text.insert(tk.END, f"{entry.info.name.name.decode('utf-8')}\n")
         except Exception as e:
-            self.result_text.insert(tk.END, f"Error: {e}\n")
+            self.result_text.insert(tk.END, f"Error: Could not retrieve audio files: {e}\n")
 
     def extract_social_media_data(self, fs):
         self.result_text.insert(tk.END, "Social Media and Communication Apps:\n")
         try:
-            social_path = "/data/data/com.social.app/databases/messages.db"
+            social_path = "/data/data/com.facebook.orca/databases/messages.db"
             file_obj = fs.open(social_path)
             local_path = "social_messages.db"
             with open(local_path, "wb") as f:
@@ -211,7 +211,7 @@ class ForensicTool:
                 self.result_text.insert(tk.END, f"{row[0]}\t{row[1]}\t{row[2]}\n")
             conn.close()
         except Exception as e:
-            self.result_text.insert(tk.END, f"Error: {e}\n")
+            self.result_text.insert(tk.END, f"Error: Could not retrieve social media data: {e}\n")
 
     def extract_location_data(self, fs):
         self.result_text.insert(tk.END, "Location Data:\n")
@@ -226,31 +226,48 @@ class ForensicTool:
             cursor.execute("SELECT latitude, longitude, timestamp FROM locations")
             rows = cursor.fetchall()
             for row in rows:
-                self.result_text.insert(tk.END, f"{row[0]}\t{row[1]}\t{row[2]}\n")
+                self.result_text.insert(tk.END, f"Latitude: {row[0]}, Longitude: {row[1]}, Timestamp: {row[2]}\n")
             conn.close()
         except Exception as e:
-            self.result_text.insert(tk.END, f"Error: {e}\n")
+            self.result_text.insert(tk.END, f"Error: Could not retrieve location data: {e}\n")
 
-    def extract_google_services(self, fs):
+    def extract_google_services_data(self, fs):
         self.result_text.insert(tk.END, "Google Services Data:\n")
         try:
-            # Assuming there's a database or file path for Google services data
-            google_path = "/data/data/com.google.android/databases/google_services.db"
+            google_path = "/data/data/com.google.android.gms/databases/google_services.db"
             file_obj = fs.open(google_path)
             local_path = "google_services.db"
             with open(local_path, "wb") as f:
                 f.write(file_obj.read_random(0, file_obj.info.meta.size))
             conn = sqlite3.connect(local_path)
             cursor = conn.cursor()
-            cursor.execute("SELECT service_name, data FROM google_services_table")
+            cursor.execute("SELECT service_name, data FROM services")
             rows = cursor.fetchall()
             for row in rows:
-                self.result_text.insert(tk.END, f"{row[0]}\t{row[1]}\n")
+                self.result_text.insert(tk.END, f"Service: {row[0]}, Data: {row[1]}\n")
             conn.close()
         except Exception as e:
-            self.result_text.insert(tk.END, f"Error: {e}\n")
+            self.result_text.insert(tk.END, f"Error: Could not retrieve Google services data: {e}\n")
+
+    def extract_deleted_files(self, fs):
+        self.result_text.insert(tk.END, "Deleted Files:\n")
+        try:
+            deleted_path = "/data/misc/recyclebin/deleted_files.db"
+            file_obj = fs.open(deleted_path)
+            local_path = "deleted_files.db"
+            with open(local_path, "wb") as f:
+                f.write(file_obj.read_random(0, file_obj.info.meta.size))
+            conn = sqlite3.connect(local_path)
+            cursor = conn.cursor()
+            cursor.execute("SELECT file_name, delete_date FROM deleted_files")
+            rows = cursor.fetchall()
+            for row in rows:
+                self.result_text.insert(tk.END, f"File: {row[0]}, Deleted On: {row[1]}\n")
+            conn.close()
+        except Exception as e:
+            self.result_text.insert(tk.END, f"Error: Could not retrieve deleted files: {e}\n")
 
 if __name__ == "__main__":
     root = tk.Tk()
     app = ForensicTool(root)
-    app.mainloop()
+    root.mainloop()
