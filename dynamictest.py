@@ -39,9 +39,9 @@ class ForensicTool:
         self.result_text["yscrollcommand"] = scrollbar.set
 
     def browse_file(self):
-        file_name = filedialog.askopenfilename(title="Select Dump Image", filetypes=[("All Files", "*.*")])
-        if file_name:
-            self.file_path.set(file_name)
+        folder_name = filedialog.askdirectory(title="Select Dump Image Folder")
+        if folder_name:
+            self.file_path.set(folder_name)
 
     def scan_file_system(self, fs, root_path="/"):
         """Recursively scan the file system and collect file paths."""
@@ -91,23 +91,43 @@ class ForensicTool:
             return
 
         try:
-            self.result_text.insert(tk.END, f"Loading image: {image_path}\n")
-            img = Img_Info(image_path)
-            fs = FS_Info(img)
+            if os.path.isdir(image_path):
+                self.result_text.insert(tk.END, f"Loading image folder: {image_path}\n")
+                img = Img_Info(image_path)  # This handles the directory
+                fs = FS_Info(img)
             
-            # Locate artifacts dynamically
-            artifacts = self.locate_artifacts(fs)
-            if artifacts["call_logs"]:
-                self.extract_call_logs(fs, artifacts["call_logs"])
-            if artifacts["sms"]:
-                self.extract_messages(fs, artifacts["sms"])
-            if artifacts["contacts"]:
-                self.extract_contacts(fs, artifacts["contacts"])
-            if artifacts["photos"]:
-                for photo_path in artifacts["photos"]:
-                    self.result_text.insert(tk.END, f"Photo: {photo_path}\n")
-            if artifacts["google_services"]:
-                self.extract_google_services(fs, artifacts["google_services"])
+                for root, dirs, files in os.walk(image_path):
+                    for file_name in files:
+                        full_path = os.path.join(root, file_name)
+                        artifacts = self.locate_artifacts(fs)
+                        if artifacts["call_logs"]:
+                            self.extract_call_logs(fs, artifacts["call_logs"])
+                        if artifacts["sms"]:
+                            self.extract_messages(fs, artifacts["sms"])
+                        if artifacts["contacts"]:
+                            self.extract_contacts(fs, artifacts["contacts"])
+                        if artifacts["photos"]:
+                            for photo_path in artifacts["photos"]:
+                                self.result_text.insert(tk.END, f"Photo: {photo_path}\n")
+                        if artifacts["google_services"]:
+                            self.extract_google_services(fs, artifacts["google_services"])
+            else:
+                self.result_text.insert(tk.END, f"Loading image: {image_path}\n")
+                img = Img_Info(image_path)
+                fs = FS_Info(img)
+            
+                artifacts = self.locate_artifacts(fs)
+                if artifacts["call_logs"]:
+                    self.extract_call_logs(fs, artifacts["call_logs"])
+                if artifacts["sms"]:
+                    self.extract_messages(fs, artifacts["sms"])
+                if artifacts["contacts"]:
+                    self.extract_contacts(fs, artifacts["contacts"])
+                if artifacts["photos"]:
+                    for photo_path in artifacts["photos"]:
+                        self.result_text.insert(tk.END, f"Photo: {photo_path}\n")
+                if artifacts["google_services"]:
+                    self.extract_google_services(fs, artifacts["google_services"])
         except Exception as e:
             messagebox.showerror("Error", f"Failed to extract artifacts: {str(e)}")
 
