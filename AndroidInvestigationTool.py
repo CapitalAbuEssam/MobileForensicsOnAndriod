@@ -1,217 +1,234 @@
 import os
-import subprocess
 import tkinter as tk
-from tkinter import ttk, messagebox, scrolledtext
+from tkinter import ttk, filedialog, messagebox
+import sqlite3
+from pytsk3 import Img_Info, FS_Info
 
-class MobileInvestigationTool:
+class ForensicTool:
     def __init__(self, root):
         self.root = root
-        self.root.title("Mobile Investigation Tool")
-        self.root.geometry("800x600")
+        self.root.title("Ultimate Mobile Forensics Tool")
+        self.root.geometry("900x700")
 
-        self.notebook = ttk.Notebook(self.root)
-        self.notebook.pack(fill='both', expand=True)
+        # File path variable
+        self.file_path = tk.StringVar()
 
-        # Create tabs
-        self.create_tabs()
+        # GUI Layout
+        self.create_gui()
 
-    def create_tabs(self):
-        self.system_tab = ttk.Frame(self.notebook)
-        self.user_data_tab = ttk.Frame(self.notebook)
-        self.media_tab = ttk.Frame(self.notebook)
-        self.app_data_tab = ttk.Frame(self.notebook)
-        self.network_tab = ttk.Frame(self.notebook)
-        self.cloud_tab = ttk.Frame(self.notebook)
-        self.deleted_tab = ttk.Frame(self.notebook)
-        self.specialized_tab = ttk.Frame(self.notebook)
-        self.analytics_tab = ttk.Frame(self.notebook)
+    def create_gui(self):
+        frame = ttk.Frame(self.root, padding="10")
+        frame.pack(fill=tk.BOTH, expand=True)
 
-        # Add tabs to notebook
-        self.notebook.add(self.system_tab, text="System Artifacts")
-        self.notebook.add(self.user_data_tab, text="User Data Artifacts")
-        self.notebook.add(self.media_tab, text="Media and Files")
-        self.notebook.add(self.app_data_tab, text="App Data")
-        self.notebook.add(self.network_tab, text="Network & Location")
-        self.notebook.add(self.cloud_tab, text="Cloud Data")
-        self.notebook.add(self.deleted_tab, text="Deleted Data")
-        self.notebook.add(self.specialized_tab, text="Specialized Artifacts")
-        self.notebook.add(self.analytics_tab, text="Analytics & Usage")
+        # File selection
+        ttk.Label(frame, text="Select Dump Image:").grid(row=0, column=0, sticky=tk.W, pady=5)
+        file_entry = ttk.Entry(frame, textvariable=self.file_path, width=60)
+        file_entry.grid(row=0, column=1, pady=5)
+        ttk.Button(frame, text="Browse", command=self.browse_file).grid(row=0, column=2, pady=5)
 
-        # Initialize each tab
-        self.init_system_tab()
-        self.init_user_data_tab()
-        self.init_media_tab()
-        self.init_app_data_tab()
-        self.init_network_tab()
-        self.init_cloud_tab()
-        self.init_deleted_tab()
-        self.init_specialized_tab()
-        self.init_analytics_tab()
+        # Artifact extraction button
+        ttk.Button(frame, text="Extract Artifacts", command=self.extract_artifacts).grid(row=1, column=0, columnspan=3, pady=10)
 
-    def run_adb_command(self, command):
+        # Result area
+        self.result_text = tk.Text(frame, wrap=tk.WORD, height=30, width=90)
+        self.result_text.grid(row=2, column=0, columnspan=3, pady=10)
+        
+        # Scrollbar for the result area
+        scrollbar = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=self.result_text.yview)
+        scrollbar.grid(row=2, column=3, sticky=tk.NS, pady=10)
+        self.result_text["yscrollcommand"] = scrollbar.set
+
+    def browse_file(self):
+        file_name = filedialog.askopenfilename(title="Select Dump Image", filetypes=[("All Files", "*.*")])
+        if file_name:
+            self.file_path.set(file_name)
+
+    def extract_artifacts(self):
+        image_path = self.file_path.get()
+        if not image_path or not os.path.exists(image_path):
+            messagebox.showerror("Error", "Invalid file path. Please select a valid dump image.")
+            return
+
         try:
-            result = subprocess.check_output(command, shell=True, text=True)
-            return result
-        except subprocess.CalledProcessError as e:
-            return f"Error: {e}"
+            # Load the image
+            self.result_text.insert(tk.END, f"Loading image: {image_path}\n")
+            img = Img_Info(image_path)
+            fs = FS_Info(img)
+            
+            # System-Level Artifacts
+            self.result_text.insert(tk.END, "\n[Extracting System-Level Artifacts]\n")
+            self.extract_device_info(fs)
+            self.extract_system_logs(fs)
+            self.extract_root_status(fs)
 
-    def display_output(self, text_widget, data):
-        text_widget.delete(1.0, tk.END)
-        text_widget.insert(tk.END, data)
+            # User Data Artifacts
+            self.result_text.insert(tk.END, "\n[Extracting User Data Artifacts]\n")
+            self.extract_call_logs(fs)
+            self.extract_contacts(fs)
+            self.extract_messages(fs)
 
-    def init_system_tab(self):
-        label = ttk.Label(self.system_tab, text="System-Level Artifacts", font=("Arial", 14))
-        label.pack()
+            # Media and Files
+            self.result_text.insert(tk.END, "\n[Extracting Media and Files]\n")
+            self.extract_photos(fs)
+            self.extract_audio_files(fs)
 
-        self.system_output = scrolledtext.ScrolledText(self.system_tab, wrap=tk.WORD, height=20)
-        self.system_output.pack(fill='both', expand=True)
+            # App Data
+            self.result_text.insert(tk.END, "\n[Extracting App Data]\n")
+            self.extract_social_media_data(fs)
 
-        btn_fetch = ttk.Button(self.system_tab, text="Fetch System Artifacts", command=self.fetch_system_artifacts)
-        btn_fetch.pack()
+            # Network and Location
+            self.result_text.insert(tk.END, "\n[Extracting Network and Location Data]\n")
+            self.extract_location_data(fs)
 
-    def fetch_system_artifacts(self):
-        device_info = self.run_adb_command("adb shell getprop")
-        system_logs = self.run_adb_command("adb logcat -d")
-        root_status = self.run_adb_command("adb shell su -c 'echo Root Access' || echo 'No Root Access'")
+            # Cloud and Synced Data
+            self.result_text.insert(tk.END, "\n[Extracting Cloud and Synced Data]\n")
+            self.extract_google_services_data(fs)
 
-        output = f"Device Information:\n{device_info}\n\nSystem Logs:\n{system_logs}\n\nRoot Status:\n{root_status}"
-        self.display_output(self.system_output, output)
+            # Deleted and Residual Data
+            self.result_text.insert(tk.END, "\n[Extracting Deleted and Residual Data]\n")
+            self.extract_deleted_files(fs)
 
-    def init_user_data_tab(self):
-        label = ttk.Label(self.user_data_tab, text="User Data Artifacts", font=("Arial", 14))
-        label.pack()
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to extract artifacts: {str(e)}")
 
-        self.user_data_output = scrolledtext.ScrolledText(self.user_data_tab, wrap=tk.WORD, height=20)
-        self.user_data_output.pack(fill='both', expand=True)
+    def extract_device_info(self, fs):
+        self.result_text.insert(tk.END, "Device Information:\n")
+        try:
+            info_path = "/data/system/device_info.txt"
+            file_obj = fs.open(info_path)
+            data = file_obj.read_random(0, file_obj.info.meta.size).decode("utf-8")
+            self.result_text.insert(tk.END, f"{data}\n")
+        except Exception as e:
+            self.result_text.insert(tk.END, f"Error: {e}\n")
 
-        btn_fetch = ttk.Button(self.user_data_tab, text="Fetch User Data", command=self.fetch_user_data)
-        btn_fetch.pack()
+    def extract_system_logs(self, fs):
+        self.result_text.insert(tk.END, "System Logs:\n")
+        try:
+            log_path = "/data/system/logs/system_log.txt"
+            file_obj = fs.open(log_path)
+            data = file_obj.read_random(0, file_obj.info.meta.size).decode("utf-8")
+            self.result_text.insert(tk.END, f"{data}\n")
+        except Exception as e:
+            self.result_text.insert(tk.END, f"Error: {e}\n")
 
-    def fetch_user_data(self):
-        call_logs = self.run_adb_command("adb shell content query --uri content://call_log/calls")
-        contacts = self.run_adb_command("adb shell content query --uri content://contacts/phones")
-        messages = self.run_adb_command("adb shell content query --uri content://sms")
+    def extract_root_status(self, fs):
+        self.result_text.insert(tk.END, "Root Status and Modifications:\n")
+        try:
+            root_path = "/data/system/root_status.txt"
+            file_obj = fs.open(root_path)
+            data = file_obj.read_random(0, file_obj.info.meta.size).decode("utf-8")
+            self.result_text.insert(tk.END, f"{data}\n")
+        except Exception as e:
+            self.result_text.insert(tk.END, f"Error: {e}\n")
 
-        output = f"Call Logs:\n{call_logs}\n\nContacts:\n{contacts}\n\nMessages:\n{messages}"
-        self.display_output(self.user_data_output, output)
+    def extract_call_logs(self, fs):
+        self.result_text.insert(tk.END, "Call Logs:\n")
+        try:
+            call_log_path = "/data/data/com.android.providers.contacts/databases/calllog.db"
+            file_obj = fs.open(call_log_path)
+            local_path = "calllog.db"
+            with open(local_path, "wb") as f:
+                f.write(file_obj.read_random(0, file_obj.info.meta.size))
+            conn = sqlite3.connect(local_path)
+            cursor = conn.cursor()
+            cursor.execute("SELECT number, date, duration, type FROM calls")
+            rows = cursor.fetchall()
+            for row in rows:
+                self.result_text.insert(tk.END, f"{row[0]}\t{row[1]}\t{row[2]}\t{row[3]}\n")
+            conn.close()
+        except Exception as e:
+            self.result_text.insert(tk.END, f"Error: {e}\n")
 
-    def init_media_tab(self):
-        label = ttk.Label(self.media_tab, text="Media and Files", font=("Arial", 14))
-        label.pack()
+    def extract_contacts(self, fs):
+        self.result_text.insert(tk.END, "Contacts:\n")
+        try:
+            contact_path = "/data/data/com.android.providers.contacts/databases/contacts.db"
+            file_obj = fs.open(contact_path)
+            local_path = "contacts.db"
+            with open(local_path, "wb") as f:
+                f.write(file_obj.read_random(0, file_obj.info.meta.size))
+            conn = sqlite3.connect(local_path)
+            cursor = conn.cursor()
+            cursor.execute("SELECT display_name, phone_number FROM contacts")
+            rows = cursor.fetchall()
+            for row in rows:
+                self.result_text.insert(tk.END, f"{row[0]}\t{row[1]}\n")
+            conn.close()
+        except Exception as e:
+            self.result_text.insert(tk.END, f"Error: {e}\n")
 
-        self.media_output = scrolledtext.ScrolledText(self.media_tab, wrap=tk.WORD, height=20)
-        self.media_output.pack(fill='both', expand=True)
+    def extract_messages(self, fs):
+        self.result_text.insert(tk.END, "Messages:\n")
+        try:
+            sms_path = "/data/data/com.android.providers.telephony/databases/mmssms.db"
+            file_obj = fs.open(sms_path)
+            local_path = "mmssms.db"
+            with open(local_path, "wb") as f:
+                f.write(file_obj.read_random(0, file_obj.info.meta.size))
+            conn = sqlite3.connect(local_path)
+            cursor = conn.cursor()
+            cursor.execute("SELECT address, body, date FROM sms")
+            rows = cursor.fetchall()
+            for row in rows:
+                self.result_text.insert(tk.END, f"{row[0]}\t{row[1]}\t{row[2]}\n")
+            conn.close()
+        except Exception as e:
+            self.result_text.insert(tk.END, f"Error: {e}\n")
 
-        btn_fetch = ttk.Button(self.media_tab, text="Fetch Media", command=self.fetch_media)
-        btn_fetch.pack()
+    def extract_photos(self, fs):
+        self.result_text.insert(tk.END, "Photos and Videos:\n")
+        try:
+            media_path = "/data/media/0/DCIM"
+            directory = fs.open_dir(media_path)
+            for entry in directory:
+                self.result_text.insert(tk.END, f"{entry.info.name.name.decode('utf-8')}\n")
+        except Exception as e:
+            self.result_text.insert(tk.END, f"Error: {e}\n")
 
-    def fetch_media(self):
-        photos_videos = self.run_adb_command("adb shell ls /sdcard/DCIM")
-        audio_files = self.run_adb_command("adb shell ls /sdcard/Music")
-        documents = self.run_adb_command("adb shell ls /sdcard/Documents")
+    def extract_audio_files(self, fs):
+        self.result_text.insert(tk.END, "Audio Files:\n")
+        try:
+            audio_path = "/data/media/0/Music"
+            directory = fs.open_dir(audio_path)
+            for entry in directory:
+                self.result_text.insert(tk.END, f"{entry.info.name.name.decode('utf-8')}\n")
+        except Exception as e:
+            self.result_text.insert(tk.END, f"Error: {e}\n")
 
-        output = f"Photos & Videos:\n{photos_videos}\n\nAudio Files:\n{audio_files}\n\nDocuments:\n{documents}"
-        self.display_output(self.media_output, output)
+    def extract_social_media_data(self, fs):
+        self.result_text.insert(tk.END, "Social Media and Communication Apps:\n")
+        try:
+            social_path = "/data/data/com.social.app/databases/messages.db"
+            file_obj = fs.open(social_path)
+            local_path = "social_messages.db"
+            with open(local_path, "wb") as f:
+                f.write(file_obj.read_random(0, file_obj.info.meta.size))
+            conn = sqlite3.connect(local_path)
+            cursor = conn.cursor()
+            cursor.execute("SELECT sender, content, timestamp FROM messages")
+            rows = cursor.fetchall()
+            for row in rows:
+                self.result_text.insert(tk.END, f"{row[0]}\t{row[1]}\t{row[2]}\n")
+            conn.close()
+        except Exception as e:
+            self.result_text.insert(tk.END, f"Error: {e}\n")
 
-    def init_app_data_tab(self):
-        label = ttk.Label(self.app_data_tab, text="App Data", font=("Arial", 14))
-        label.pack()
+    def extract_location_data(self, fs):
+        self.result_text.insert(tk.END, "Location Data:\n")
+        try:
+            loc_path = "/data/data/com.android.location/databases/location.db"
+            file_obj = fs.open(loc_path)
+            local_path = "location.db"
+            with open(local_path, "wb") as f:
+                f.write(file_obj.read_random(0, file_obj.info.meta.size))
+            conn = sqlite3.connect(local_path)
+            cursor = conn.cursor()
+            cursor.execute("SELECT latitude, longitude, timestamp FROM locations")
+            rows = cursor.fetchall()
+            for row in rows:
+                self.result_text.insert(tk.END, f"{row[0]}\t{row[1]}\t{row[2]}\n")
+            conn.close()
+        except Exception as e:
+            self.result_text.insert(tk.END, f"Error: {e}\n")
 
-        self.app_data_output = scrolledtext.ScrolledText(self.app_data_tab, wrap=tk.WORD, height=20)
-        self.app_data_output.pack(fill='both', expand=True)
-
-        btn_fetch = ttk.Button(self.app_data_tab, text="Fetch App Data", command=self.fetch_app_data)
-        btn_fetch.pack()
-
-    def fetch_app_data(self):
-        social_media = self.run_adb_command("adb shell ls /sdcard/Android/data/com.facebook.katana")
-        email_apps = self.run_adb_command("adb shell ls /sdcard/Android/data/com.google.android.gm")
-
-        output = f"Social Media Data:\n{social_media}\n\nEmail Apps Data:\n{email_apps}"
-        self.display_output(self.app_data_output, output)
-
-    def init_network_tab(self):
-        label = ttk.Label(self.network_tab, text="Network and Location", font=("Arial", 14))
-        label.pack()
-
-        self.network_output = scrolledtext.ScrolledText(self.network_tab, wrap=tk.WORD, height=20)
-        self.network_output.pack(fill='both', expand=True)
-
-        btn_fetch = ttk.Button(self.network_tab, text="Fetch Network Data", command=self.fetch_network_data)
-        btn_fetch.pack()
-
-    def fetch_network_data(self):
-        wifi_data = self.run_adb_command("adb shell dumpsys wifi")
-        location_data = self.run_adb_command("adb shell dumpsys location")
-
-        output = f"Wi-Fi Data:\n{wifi_data}\n\nLocation Data:\n{location_data}"
-        self.display_output(self.network_output, output)
-
-    def init_cloud_tab(self):
-        label = ttk.Label(self.cloud_tab, text="Cloud and Synced Data", font=("Arial", 14))
-        label.pack()
-
-        self.cloud_output = scrolledtext.ScrolledText(self.cloud_tab, wrap=tk.WORD, height=20)
-        self.cloud_output.pack(fill='both', expand=True)
-
-        btn_fetch = ttk.Button(self.cloud_tab, text="Fetch Cloud Data", command=self.fetch_cloud_data)
-        btn_fetch.pack()
-
-    def fetch_cloud_data(self):
-        google_services = self.run_adb_command("adb shell pm list packages | grep google")
-
-        output = f"Google Services:\n{google_services}"
-        self.display_output(self.cloud_output, output)
-
-    def init_deleted_tab(self):
-        label = ttk.Label(self.deleted_tab, text="Deleted and Residual Data", font=("Arial", 14))
-        label.pack()
-
-        self.deleted_output = scrolledtext.ScrolledText(self.deleted_tab, wrap=tk.WORD, height=20)
-        self.deleted_output.pack(fill='both', expand=True)
-
-        btn_fetch = ttk.Button(self.deleted_tab, text="Fetch Deleted Data", command=self.fetch_deleted_data)
-        btn_fetch.pack()
-
-    def fetch_deleted_data(self):
-        deleted_files = self.run_adb_command("adb shell ls /data/data/com.android.providers.downloads/cache")
-
-        output = f"Deleted Files:\n{deleted_files}"
-        self.display_output(self.deleted_output, output)
-
-    def init_specialized_tab(self):
-        label = ttk.Label(self.specialized_tab, text="Specialized Artifacts", font=("Arial", 14))
-        label.pack()
-
-        self.specialized_output = scrolledtext.ScrolledText(self.specialized_tab, wrap=tk.WORD, height=20)
-        self.specialized_output.pack(fill='both', expand=True)
-
-        btn_fetch = ttk.Button(self.specialized_tab, text="Fetch Specialized Data", command=self.fetch_specialized_data)
-        btn_fetch.pack()
-
-    def fetch_specialized_data(self):
-        iot_data = self.run_adb_command("adb shell ls /data/data/com.iot")
-
-        output = f"IoT Data:\n{iot_data}"
-        self.display_output(self.specialized_output, output)
-
-    def init_analytics_tab(self):
-        label = ttk.Label(self.analytics_tab, text="Analytics and Usage", font=("Arial", 14))
-        label.pack()
-
-        self.analytics_output = scrolledtext.ScrolledText(self.analytics_tab, wrap=tk.WORD, height=20)
-        self.analytics_output.pack(fill='both', expand=True)
-
-        btn_fetch = ttk.Button(self.analytics_tab, text="Fetch Analytics Data", command=self.fetch_analytics_data)
-        btn_fetch.pack()
-
-    def fetch_analytics_data(self):
-        clipboard_data = self.run_adb_command("adb shell dumpsys clipboard")
-
-        output = f"Clipboard Data:\n{clipboard_data}"
-        self.display_output(self.analytics_output, output)
-
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = MobileInvestigationTool(root)
-    root.mainloop()
+    def extract_google_services
