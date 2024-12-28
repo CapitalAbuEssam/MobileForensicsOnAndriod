@@ -231,4 +231,22 @@ class ForensicTool:
         except Exception as e:
             self.result_text.insert(tk.END, f"Error: {e}\n")
 
-    def extract_google_services
+    def extract_google_services(self, fs):
+        self.result_text.insert(tk.END, "Google Services Data:\n")
+        try:
+            # Assuming there's a database or file path for Google services data
+            google_path = "/data/data/com.google.android/databases/google_services.db"
+            file_obj = fs.open(google_path)
+            local_path = "google_services.db"
+            with open(local_path, "wb") as f:
+                f.write(file_obj.read_random(0, file_obj.info.meta.size))
+            conn = sqlite3.connect(local_path)
+            cursor = conn.cursor()
+            cursor.execute("SELECT service_name, data FROM google_services_table")
+            rows = cursor.fetchall()
+            for row in rows:
+                self.result_text.insert(tk.END, f"{row[0]}\t{row[1]}\n")
+            conn.close()
+        except Exception as e:
+            self.result_text.insert(tk.END, f"Error: {e}\n")
+
