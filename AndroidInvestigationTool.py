@@ -250,3 +250,6 @@ class ForensicTool:
         except Exception as e:
             self.result_text.insert(tk.END, f"Error: {e}\n")
 
+if __name__ == "__main__":
+    app = App()
+    app.mainloop()
