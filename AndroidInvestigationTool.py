@@ -251,5 +251,6 @@ class ForensicTool:
             self.result_text.insert(tk.END, f"Error: {e}\n")
 
 if __name__ == "__main__":
-    app = App()
+    root = tk.Tk()
+    app = ForensicTool(root)
     app.mainloop()
